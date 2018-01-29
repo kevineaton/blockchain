@@ -3,7 +3,13 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 /*Block represents a single block in the chain*/
@@ -37,4 +43,55 @@ func generateBlock(oldBlock Block, bpm int) (Block, error) {
 	}
 	newBlock.Hash = calculateHash(newBlock)
 	return newBlock, nil
+}
+
+//checks is a block is valid. Todo: add an error message
+func isBlockValid(newBlock, oldBlock Block) bool {
+	if oldBlock.Index+1 != newBlock.Index {
+		return false
+	}
+	if oldBlock.Hash != newBlock.PrevHash {
+		return false
+	}
+
+	calculated := calculateHash(newBlock)
+	if calculated != newBlock.Hash {
+		return false
+	}
+	return true
+}
+
+//if a suggested blockchain is longer than what we have, we need to update our chain
+func replaceChain(newBlocks []Block) {
+	if len(newBlocks) > len(Blockchain) {
+		Blockchain = newBlocks
+	}
+}
+
+func run() error {
+	mux := makeMuxRouter()
+	httpAddr := os.Getenv("ADDR")
+
+	log.Printf("\nListening on %s", httpAddr)
+
+	s := &http.Server{
+		Addr:           ":" + httpAddr,
+		Handler:        mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	err := s.ListenAndServe()
+	return err
+}
+
+func makeMuxRouter() http.Handler {
+	muxRouter := mux.NewRouter()
+
+	return muxRouter
+}
+
+func main() {
+	fmt.Println("Not implemented yet")
 }
